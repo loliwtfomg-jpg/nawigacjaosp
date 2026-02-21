@@ -1,11 +1,48 @@
-const CACHE='osp-lazy-noqr-v1';
-const ASSETS=['./','./index.html','./manifest.json','./sw.js','./icon-192.png','./icon-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>k!==CACHE?caches.delete(k):null))));self.clients.claim();});
-self.addEventListener('fetch',e=>{
-  if(e.request.mode==='navigate'){e.respondWith(caches.match('./index.html').then(r=>r||fetch(e.request)));return;}
-  const url=new URL(e.request.url);
-  if(url.origin===location.origin){
-    e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(resp=>{const copy=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return resp;})));
+const CACHE = 'osp-lazy-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './sw.js',
+  './icon-192.png',
+  './icon-512.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => (k !== CACHE) ? caches.delete(k) : null)))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // For navigation requests, serve cached shell first (offline support)
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      caches.match('./index.html').then(res => res || fetch(req))
+    );
+    return;
+  }
+
+  // Cache-first for same-origin assets
+  if (url.origin === location.origin) {
+    event.respondWith(
+      caches.match(req).then(cached => cached || fetch(req).then(resp => {
+        // runtime cache
+        const copy = resp.clone();
+        caches.open(CACHE).then(cache => cache.put(req, copy));
+        return resp;
+      }).catch(() => cached))
+    );
   }
 });
