@@ -43,7 +43,7 @@ a{color:#ff5a6a;text-decoration:none;}
 <button id="installBtn" class="btn secondary" style="display:none;">Zainstaluj aplikację</button><div id="installHint" class="meta" style="display:none;max-width:360px;">Jeśli nie widzisz przycisku: w <b>Chrome</b> wejdź w menu ⋮ i wybierz <b>Zainstaluj aplikację</b> (albo <b>Dodaj do ekranu głównego</b>).</div>
 </div>
 </div>
-</header>
+<button style='position:absolute;right:20px;top:20px;padding:6px 10px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;' onclick='openAdmin()'>ADMIN</button></header>
 
 <div class="tabs" id="tabs"></div>
 <div class="grid" id="grid"></div>
@@ -104,6 +104,77 @@ installBtn.style.display='none';
 });
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+</script>
+
+
+<!-- ADMIN PANEL -->
+<style>
+.adminOverlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;justify-content:center;align-items:center;z-index:9999;}
+.adminBox{background:#111;padding:20px;border-radius:12px;width:90%;max-width:420px;color:#fff;}
+.adminBox input{width:100%;margin-bottom:10px;padding:8px;border-radius:8px;border:1px solid #333;background:#1c1f26;color:#fff;}
+.adminBox button{margin-bottom:8px;width:100%;padding:10px;border-radius:8px;border:none;background:#ff3b4c;color:#fff;font-weight:bold;cursor:pointer;}
+.adminSmall{font-size:12px;color:#aaa;margin-bottom:10px;}
+</style>
+
+<div class="adminOverlay" id="adminOverlay">
+  <div class="adminBox">
+    <div id="adminLogin">
+      <h3>Panel Administratora</h3>
+      <input type="password" id="adminPass" placeholder="Hasło">
+      <button onclick="adminLogin()">Zaloguj</button>
+      <div id="adminError" class="adminSmall"></div>
+    </div>
+    <div id="adminContent" style="display:none;">
+      <div class="adminSmall">Wyszukaj numer i popraw adres Google Maps</div>
+      <input type="number" id="editNumber" placeholder="Numer budynku">
+      <input type="text" id="editUrl" placeholder="Nowy link Google Maps">
+      <button onclick="saveAddress()">Zapisz adres</button>
+      <button onclick="exportBackup()">Eksport kopii JSON</button>
+      <button onclick="closeAdmin()">Zamknij</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = "pako14";
+
+function openAdmin(){ document.getElementById('adminOverlay').style.display='flex'; }
+function closeAdmin(){ document.getElementById('adminOverlay').style.display='none'; }
+
+function adminLogin(){
+  const pass=document.getElementById('adminPass').value;
+  if(pass===ADMIN_PASSWORD){
+    document.getElementById('adminLogin').style.display='none';
+    document.getElementById('adminContent').style.display='block';
+  }else{
+    document.getElementById('adminError').innerText='Nieprawidłowe hasło';
+  }
+}
+
+function saveAddress(){
+  const num=parseInt(document.getElementById('editNumber').value);
+  const url=document.getElementById('editUrl').value;
+  let data=JSON.parse(localStorage.getItem('OSP_DATA')||'null');
+  if(!data){ data=DATA; }
+  const item=data.find(d=>d.n===num);
+  if(item){ item.url=url; localStorage.setItem('OSP_DATA',JSON.stringify(data)); alert("Zapisano"); }
+}
+
+function exportBackup(){
+  const data=localStorage.getItem('OSP_DATA')||JSON.stringify(DATA);
+  const blob=new Blob([data],{type:"application/json"});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download="osp_lazy_backup.json";
+  a.click();
+}
+
+// Override DATA if saved
+window.addEventListener('load',()=>{
+  const saved=localStorage.getItem('OSP_DATA');
+  if(saved){ DATA=JSON.parse(saved); if(typeof render==='function'){ render(); } }
+});
+
 </script>
 
 </body>
